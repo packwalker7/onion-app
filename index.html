@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2563eb">
+<title>양파 판매 관리</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root {
+  --acc:#2563eb; --acc-l:#eff4ff;
+  --grn:#16a34a; --grn-l:#f0fdf4; --grn-b:#86efac;
+  --amb:#d97706; --amb-l:#fffbeb; --amb-b:#fcd34d;
+  --red:#dc2626; --red-l:#fef2f2; --red-b:#fca5a5;
+  --t1:#111827; --t2:#6b7280; --t3:#9ca3af;
+  --bg:#f3f4f6; --bg2:#fff; --bd:#e5e7eb; --bd2:#d1d5db;
+  --r:12px; --rs:8px; --rx:6px;
+  --sb:env(safe-area-inset-bottom,0px);
+  --st:env(safe-area-inset-top,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;font-family:-apple-system,'Malgun Gothic',sans-serif;font-size:14px;background:var(--bg);color:var(--t1);}
+.app{display:flex;flex-direction:column;height:100dvh;}
+
+/* 헤더 */
+.hdr{background:var(--acc);color:#fff;padding:calc(var(--st)+6px) 12px 6px;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:nowrap;}
+.hdr-title{font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px;flex:1;white-space:nowrap;}
+.hdr-date{font-size:12px;padding:3px 7px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.4);background:rgba(255,255,255,0.15);color:#fff;outline:none;-webkit-appearance:none;}
+.hdr-date::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.8;}
+
+/* 동기화 상태 표시 */
+.sync-bar{display:flex;align-items:center;gap:6px;padding:5px 13px;font-size:11px;background:var(--bg2);border-bottom:1px solid var(--bd);}
+.sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.sync-dot.ok{background:var(--grn);}
+.sync-dot.ing{background:var(--amb);animation:pulse .8s infinite;}
+.sync-dot.err{background:var(--red);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--sb)+80px);}
+.bnav{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--bd);display:flex;padding-bottom:var(--sb);z-index:100;}
+.nbtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 4px 7px;border:none;background:none;color:var(--t3);font-size:10px;font-weight:500;cursor:pointer;}
+.nbtn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.nbtn.on{color:var(--acc);}
+#nav-order.on{color:#16a34a;}
+#nav-stat.on{color:#2563eb;}
+#nav-settle.on{color:#7c3aed;}
+#nav-memo.on{color:#d97706;}
+#nav-settings.on{color:#dc2626;}
+#nav-order svg{stroke:#16a34a;}
+#nav-stat svg{stroke:#2563eb;}
+#nav-settle svg{stroke:#7c3aed;}
+#nav-memo svg{stroke:#d97706;}
+#nav-settings svg{stroke:#dc2626;}
+.nbtn:not(.on) svg{stroke:var(--t3);}
+.pane{display:none;}.pane.on{display:block;}
+
+/* 공통 컴포넌트 */
+.card{background:var(--bg2);border-radius:var(--r);border:1px solid var(--bd);margin:10px 12px;overflow:hidden;}
+.ctitle{font-size:13px;font-weight:600;color:var(--t2);padding:11px 13px;border-bottom:1px solid var(--bd);}
+.btn{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:500;padding:7px 12px;border-radius:var(--rx);border:1px solid var(--bd2);background:var(--bg2);color:var(--t1);cursor:pointer;white-space:nowrap;}
+.btn-p{background:var(--acc);color:#fff;border-color:var(--acc);}
+.btn-g{background:var(--grn-l);color:var(--grn);border-color:var(--grn-b);}
+.btn-a{background:var(--amb-l);color:var(--amb);border-color:var(--amb-b);}
+.btn-r{background:var(--red-l);color:var(--red);border-color:var(--red-b);}
+.btn-s{font-size:12px;padding:5px 10px;}
+input[type=text],input[type=number],input[type=date],select,textarea{
+  font-size:14px;padding:9px 10px;border:1px solid var(--bd2);border-radius:var(--rx);
+  background:var(--bg2);color:var(--t1);width:100%;outline:none;-webkit-appearance:none;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--acc);}
+.fgrp{display:flex;flex-direction:column;gap:3px;flex:1;min-width:90px;}
+.fgrp label{font-size:11px;color:var(--t2);}
+
+/* 진행바 */
+.pgwrap{padding:7px 12px 5px;background:var(--bg2);border-bottom:1px solid var(--bd);}
+.pghdr{display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:4px;}
+.pgbg{background:var(--bd);border-radius:20px;height:6px;overflow:hidden;}
+.pgfill{height:100%;border-radius:20px;background:var(--grn);transition:width .3s;}
+
+/* 단가 패널 */
+.ppanel{margin:9px 12px;background:var(--amb-l);border:1px solid var(--amb-b);border-radius:var(--r);padding:10px 11px;}
+.ptitle{font-size:12px;font-weight:600;color:#92400E;margin-bottom:8px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.pitem{display:flex;flex-direction:column;gap:3px;}
+.plabel{font-size:11px;font-weight:600;padding:3px 7px;border-radius:4px;display:flex;align-items:center;gap:3px;}
+.plabel .pn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+.pinput{font-size:15px;padding:7px 8px;border:1px solid var(--amb-b);border-radius:4px;background:#fff;text-align:right;font-weight:500;width:100%;outline:none;-webkit-appearance:none;}
+.pinput::placeholder{color:#c9a227;font-size:12px;}
+.psaved{font-size:10px;padding:1px 7px;border-radius:20px;background:var(--grn-l);color:var(--grn);margin-left:auto;display:none;}
+
+/* 품목 탭 */
+.itwrap{padding:7px 12px 5px;background:var(--bg2);border-bottom:1px solid var(--bd);}
+.ithint{font-size:10px;color:var(--t3);margin-bottom:5px;}
+.itscroll{display:flex;gap:5px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px;}
+.itscroll::-webkit-scrollbar{display:none;}
+.itab{font-size:12px;font-weight:500;padding:5px 11px;border-radius:20px;border:1.5px solid transparent;cursor:pointer;white-space:nowrap;background:var(--bg);color:var(--t2);flex-shrink:0;}
+.itab.on{border-color:currentColor;}
+
+/* 메모 */
+.mwrap{margin:7px 12px;}
+.mtoggle{width:100%;display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rx);cursor:pointer;font-size:12px;font-weight:500;color:var(--t2);}
+.mtoggle.hm{background:var(--amb-l);border-color:var(--amb-b);color:#92400E;}
+.mbody{background:var(--bg2);border:1px solid var(--amb-b);border-top:none;border-radius:0 0 var(--rx) var(--rx);padding:10px 12px;display:none;}
+.mbody.open{display:block;}
+
+/* 요약 */
+.sstrip{display:flex;background:var(--bg2);border-bottom:1px solid var(--bd);}
+.ssi{flex:1;padding:8px 5px;text-align:center;border-right:1px solid var(--bd);}
+.ssi:last-child{border-right:none;}
+.ssv{font-size:14px;font-weight:600;}
+.ssl{font-size:9px;color:var(--t3);margin-top:1px;}
+
+/* 주문 테이블 */
+.otbl-wrap{margin:8px 12px 80px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;}
+.otbl{width:100%;border-collapse:collapse;table-layout:fixed;}
+.otbl col.c-veh{width:52px;}
+.otbl col.c-itm{width:auto;}
+.otbl col.c-prc{width:66px;}
+.otbl col.c-qty{width:50px;}
+.otbl col.c-amt{width:58px;}
+.otbl col.c-btn{width:18px;}
+.otbl thead tr{background:var(--bg);}
+.otbl th{font-size:10px;font-weight:600;color:var(--t2);padding:6px 4px;border-bottom:1px solid var(--bd);text-align:left;}
+.otbl th.r{text-align:right;}
+.otbl td{font-size:12px;padding:4px 4px;border-bottom:1px solid var(--bd);vertical-align:middle;}
+.otbl td.r{text-align:right;}
+.otbl .mrow td{border-bottom:none !important;}
+.otbl .srow td,.otbl .solo td,.otbl .lsub td{border-bottom:1px solid var(--bd);}
+.qinp{width:100%;text-align:right;font-size:11px;padding:4px 2px;border:1px solid var(--bd2);border-radius:4px;background:var(--bg2);color:var(--t1);-webkit-appearance:none;}
+.qinp:focus{outline:none;border-color:var(--acc);}
+.pricinp{width:100%;text-align:right;font-size:10px;padding:3px 2px;border:1px solid var(--bd2);border-radius:4px;background:var(--bg2);color:var(--t1);-webkit-appearance:none;}
+.pricinp:focus{outline:none;}
+.pricinp:disabled{opacity:.3;border-color:transparent;background:transparent;}
+.ibadge{font-size:10px;font-weight:500;padding:2px 5px;border-radius:20px;display:inline-flex;align-items:center;gap:2px;max-width:100%;overflow:hidden;}
+.ds{display:inline-block;width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.dtag{font-size:9px;padding:1px 3px;border-radius:20px;background:var(--red-l);color:var(--red);display:block;text-align:right;margin-bottom:1px;}
+.abtn{color:var(--acc);background:none;border:none;cursor:pointer;font-size:15px;padding:0;line-height:1;}
+.dbtn{color:var(--t3);background:none;border:none;cursor:pointer;font-size:12px;padding:0;line-height:1;}
+.sssel{font-size:10px;padding:3px 2px;border:1px solid var(--bd2);border-radius:4px;background:var(--bg2);color:var(--t1);width:100%;}
+.ftrow td{font-weight:600;background:var(--bg);font-size:12px;}
+.acell{font-size:11px;font-weight:500;line-height:1.3;}
+
+/* 통계 */
+.sfil{padding:10px 12px;background:var(--bg2);border-bottom:1px solid var(--bd);display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;}
+.scards{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 12px;}
+.scard{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rs);padding:10px 12px;}
+.scard .lb{font-size:10px;color:var(--t2);margin-bottom:2px;}
+.scard .vl{font-size:18px;font-weight:600;}
+.scard .dl{font-size:10px;margin-top:2px;}
+.dup{color:var(--grn);}.ddn{color:var(--red);}
+.rsec{margin:0 12px 10px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:11px 12px;}
+.rtit{font-size:12px;font-weight:600;color:var(--t2);margin-bottom:8px;}
+.ritem{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--bd);}
+.ritem:last-child{border-bottom:none;}
+.rmed{font-size:14px;width:22px;text-align:center;flex-shrink:0;}
+.rinfo{flex:1;min-width:0;}
+.rnm{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rbbg{background:var(--bd);border-radius:20px;height:4px;margin-top:3px;overflow:hidden;}
+.rbfill{height:100%;border-radius:20px;}
+.rvl{font-size:11px;color:var(--t2);flex-shrink:0;}
+.cwrap{margin:0 12px 10px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:11px 12px;overflow:hidden;}
+.ctit{font-size:12px;font-weight:500;color:var(--t2);margin-bottom:8px;}
+
+/* 정산 */
+.setcard{margin:8px 12px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;}
+.setph{padding:10px 12px;background:var(--bg);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;}
+.settbl{width:100%;border-collapse:collapse;font-size:11px;}
+.settbl th{background:#e8eef8;padding:6px 7px;text-align:right;font-weight:600;color:#1e3a5f;border-bottom:1px solid #bdc7d8;}
+.settbl th:first-child{text-align:left;}
+.sg td{background:#DBEAFE;font-weight:600;color:#1e3a5f;padding:5px 7px;border-bottom:1px solid #bdc7d8;}
+.sd td{background:#f8fafd;padding:4px 7px;border-bottom:1px solid #dde3ec;}
+.si td{background:#fff;padding:3px 7px 3px 14px;border-bottom:1px solid #edf0f5;color:#888;}
+.st td{background:#DCFCE7;font-weight:700;color:#14532d;padding:6px 7px;}
+.tr{text-align:right;}
+
+/* 메모검색 */
+.msf{padding:10px 12px;background:var(--bg2);border-bottom:1px solid var(--bd);display:flex;flex-direction:column;gap:7px;}
+.mrc{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rx);padding:9px 11px;margin:0 12px 7px;}
+.mrd{font-size:11px;font-weight:600;color:#92400E;margin-bottom:3px;}
+.mrt{font-size:13px;line-height:1.5;white-space:pre-wrap;}
+
+/* 설정 */
+.seti{display:flex;align-items:center;justify-content:space-between;padding:12px 13px;border-bottom:1px solid var(--bd);}
+.seti:last-child{border-bottom:none;}
+.setlb{font-size:13px;font-weight:500;}
+.setsb{font-size:11px;color:var(--t2);margin-top:2px;}
+
+/* FAB */
+.fab{position:fixed;right:14px;bottom:calc(var(--sb)+70px);width:50px;height:50px;border-radius:50%;background:var(--grn);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(22,163,74,.4);z-index:90;}
+.fab:active{transform:scale(.92);}
+.nodata{text-align:center;padding:24px;color:var(--t3);font-size:13px;}
+
+/* 로딩 오버레이 */
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:12px;}
+.loading-spinner{width:36px;height:36px;border:3px solid var(--bd);border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:13px;color:var(--t2);}
+
+/* 태블릿 최적화 (8.4인치 1920x1200 - ALLDOCUBE iPlay60 mini Pro 2.0) */
+@media screen and (min-width: 600px) {
+  /* 헤더 */
+  .hdr{padding:12px 18px;}
+  .hdr-title{font-size:18px;gap:8px;}
+  .hdr-date{font-size:14px;padding:5px 12px;}
+  /* 단가 패널 */
+  .pgrid{grid-template-columns:repeat(3,1fr);gap:10px;}
+  .pinput{font-size:17px;padding:10px;}
+  .ptitle{font-size:14px;}
+  /* 품목 탭 */
+  .itab{font-size:14px;padding:7px 16px;}
+  .ithint{font-size:12px;}
+  /* 요약 */
+  .ssv{font-size:20px;}
+  .ssl{font-size:12px;}
+  /* 주문 테이블 */
+  .otbl col.c-veh{width:80px;}
+  .otbl col.c-prc{width:82px;}
+  .otbl col.c-qty{width:64px;}
+  .otbl col.c-amt{width:80px;}
+  .otbl col.c-btn{width:28px;}
+  .otbl td{font-size:15px;padding:8px 8px;}
+  .otbl th{font-size:13px;padding:9px 8px;}
+  .qinp{font-size:16px;padding:6px 5px;}
+  .pricinp{font-size:13px;padding:5px 4px;}
+  .ibadge{font-size:13px;padding:4px 9px;gap:4px;}
+  .ds{width:8px;height:8px;}
+  .abtn{font-size:20px;}
+  .dbtn{font-size:15px;}
+  /* 진행바 */
+  .pghdr{font-size:13px;}
+  .pgbg{height:8px;}
+  /* 메모 */
+  .mtoggle{font-size:14px;padding:12px 15px;}
+  /* 통계 */
+  .scards{grid-template-columns:1fr 1fr;}
+  .scard .vl{font-size:24px;}
+  .scard .lb{font-size:13px;}
+  /* 하단 네비 */
+  .nbtn{font-size:13px;padding:12px 8px 10px;}
+  .nbtn svg{width:26px;height:26px;}
+  /* 설정 */
+  .setlb{font-size:15px;}
+  .setsb{font-size:13px;}
+  /* 정산 */
+  .settbl{font-size:13px;}
+  .settbl th,.settbl td{padding:8px 10px;}
+  /* 검색 탭 */
+  .stab,.search-toggle button{font-size:15px;padding:12px;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- 로딩 오버레이 -->
+  <div class="loading-overlay" id="loading">
+    <div class="loading-spinner"></div>
+    <div class="loading-txt">클라우드에서 데이터 로딩 중...</div>
+  </div>
+
+  <!-- 로그인 화면 -->
+  <div id="login-screen" style="display:none;position:fixed;inset:0;background:#f3f4f6;flex-direction:column;align-items:center;justify-content:center;z-index:1000;gap:20px;">
+    <div style="text-align:center;margin-bottom:8px;">
+      <div style="font-size:48px;margin-bottom:8px;">🧅</div>
+      <div style="font-size:20px;font-weight:600;color:#111827;">양파 판매 관리</div>
+      <div style="font-size:13px;color:#6b7280;margin-top:4px;">v3.0 Firebase</div>
+    </div>
+    <button id="login-btn" onclick="loginWithGoogle()"
+      style="display:flex;align-items:center;gap:10px;padding:13px 24px;border-radius:12px;border:1px solid #d1d5db;background:#fff;font-size:15px;font-weight:500;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+      <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      구글로 로그인
+    </button>
+    <div style="font-size:11px;color:#9ca3af;text-align:center;">로그인한 사용자만 접근할 수 있습니다</div>
+  </div>
+
+  <!-- 앱 전체 래퍼 -->
+  <div id="app-screen" style="display:none;flex-direction:column;height:100dvh;">
+
+  <!-- 헤더 -->
+  <div class="hdr">
+    <div class="hdr-title">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>
+      양파 판매 관리
+    </div>
+    <input type="date" id="order-date" class="hdr-date">
+    <button id="undo-btn" onclick="undoAction()" disabled title="되돌리기 (0회)"
+      style="min-width:36px;height:30px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.4);background:rgba(255,255,255,0.15);color:#fff;cursor:pointer;font-size:16px;flex-shrink:0;opacity:0.4;padding:0 6px;">↩</button>
+    <button onclick="logout()" style="font-size:11px;padding:3px 8px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.4);background:rgba(255,255,255,0.15);color:#fff;cursor:pointer;white-space:nowrap;flex-shrink:0;">로그아웃</button>
+  </div>
+
+  <div class="content">
+    <!-- 동기화 상태바 -->
+    <div class="sync-bar">
+      <span class="sync-dot ok" id="sync-dot"></span>
+      <span id="sync-txt">클라우드 연결됨</span>
+    </div>
+
+    <!-- 주문 탭 -->
+    <div class="pane on" id="pane-order">
+      <div class="pgwrap">
+        <div class="pghdr"><span>오늘 입력 완료</span><span id="pgtxt" style="font-weight:500;color:var(--t1)">0 / 34곳</span></div>
+        <div class="pgbg"><div class="pgfill" id="pgfill" style="width:0%"></div></div>
+      </div>
+
+      <div class="ppanel">
+        <div class="ptitle">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          오늘의 단가 (원/박스)
+          <span class="psaved" id="psaved">✓ 저장됨</span>
+        </div>
+        <div class="pgrid" id="pgrid"></div>
+      </div>
+
+      <div class="itwrap">
+        <div class="ithint">품목 탭 선택 → 수량 입력 시 자동 적용 · 엔터로 다음 칸 이동</div>
+        <div class="itscroll" id="itabs"></div>
+      </div>
+
+      <div class="mwrap">
+        <button class="mtoggle" id="mtbtn" onclick="toggleMemo()">
+          <span id="mtlbl">📝 메모</span>
+          <svg id="mtchev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+        <div class="mbody" id="mbody">
+          <textarea id="mta" rows="3" placeholder="이날 특별한 사항을 메모하세요..." style="border:1px solid var(--amb-b);border-radius:4px;resize:none;font-size:13px;margin-bottom:7px;"></textarea>
+          <div style="display:flex;gap:7px;justify-content:flex-end;">
+            <button class="btn btn-r btn-s" onclick="deleteMemo()">삭제</button>
+            <button class="btn btn-a btn-s" onclick="saveMemo()">저장</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sstrip">
+        <div class="ssi"><div class="ssv" id="s-total">0</div><div class="ssl">총금액(원)</div></div>
+        <div class="ssi"><div class="ssv" id="s-qty">0</div><div class="ssl">수량(박스)</div></div>
+        <div class="ssi"><div class="ssv" id="s-cnt">0</div><div class="ssl">거래처(곳)</div></div>
+      </div>
+
+      <div class="otbl-wrap">
+        <table class="otbl">
+          <colgroup>
+            <col class="c-veh"><col class="c-itm">
+            <col class="c-prc"><col class="c-qty">
+            <col class="c-amt"><col class="c-btn">
+          </colgroup>
+          <thead><tr>
+            <th>차량</th><th>품목</th>
+            <th class="r">단가</th><th class="r">수량</th>
+            <th class="r">금액</th><th></th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+          <tfoot><tr class="ftrow">
+            <td colspan="3"></td>
+            <td class="r" id="ft-qty">-</td>
+            <td class="r" id="ft-amt">-</td>
+            <td></td>
+          </tr></tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- 통계 탭 -->
+    <div class="pane" id="pane-stat">
+      <div class="sfil">
+        <div class="fgrp"><label>시작일</label><input type="date" id="sf" style="font-size:13px;padding:7px 9px;"></div>
+        <div class="fgrp"><label>종료일</label><input type="date" id="st" style="font-size:13px;padding:7px 9px;"></div>
+        <button class="btn btn-p btn-s" onclick="runStat()" style="align-self:flex-end;padding:8px 14px;">조회</button>
+      </div>
+      <div class="scards" style="grid-template-columns:1fr 1fr;">
+        <div class="scard"><div class="lb">총 판매금액</div><div class="vl" id="sc-total">-</div><div class="dl" id="sc-total-d"></div></div>
+        <div class="scard"><div class="lb">총 판매수량</div><div class="vl" id="sc-qty">-</div><div class="dl" id="sc-qty-d"></div></div>
+      </div>
+      <!-- 거래처별 매출 순위 -->
+      <div class="rsec" id="partner-rsec" style="display:none;">
+        <div class="rtit">🏢 거래처별 매출 순위 TOP10</div>
+        <div id="partner-rlist"></div>
+      </div>
+      <!-- 품목별 순위 -->
+      <div class="rsec" id="rsec" style="display:none;">
+        <div class="rtit">🏆 품목별 판매금액 순위</div>
+        <div id="rlist"></div>
+      </div>
+      <!-- 기간별 매출 차트 -->
+      <div class="cwrap"><div class="ctit" id="ctit">기간별 판매금액</div><canvas id="mchart" style="max-height:180px;"></canvas></div>
+      <!-- 품목별 도넛 차트 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 12px 10px;">
+        <div class="cwrap" style="margin:0;"><div class="ctit">품목별 판매금액</div><canvas id="chart-item-amt" style="max-height:260px;"></canvas></div>
+        <div class="cwrap" style="margin:0;"><div class="ctit">품목별 판매수량</div><canvas id="chart-item-qty" style="max-height:260px;"></canvas></div>
+      </div>
+      <div style="height:20px;"></div>
+    </div>
+
+    <!-- 정산 탭 -->
+    <div class="pane" id="pane-settle">
+      <div class="sfil">
+        <div class="fgrp" style="min-width:120px;"><label>시작일</label><input type="date" id="sef" style="font-size:13px;padding:7px 6px;width:100%;"></div>
+        <div class="fgrp" style="min-width:120px;"><label>종료일</label><input type="date" id="set" style="font-size:13px;padding:7px 6px;width:100%;"></div>
+        <div class="fgrp" style="min-width:70px;max-width:90px;"><label>거래처</label><select id="sep" style="font-size:13px;padding:7px 5px;width:100%;"><option value="all">전체</option></select></div>
+        <div class="fgrp" style="min-width:65px;max-width:80px;"><label>구분</label>
+          <select id="sem" style="font-size:13px;padding:7px 5px;width:100%;"><option value="weekly">주별</option><option value="monthly">월별</option></select>
+        </div>
+        <div style="display:flex;gap:5px;align-self:flex-end;">
+          <button class="btn btn-p btn-s" onclick="runSettle()" style="padding:8px 12px;">조회</button>
+          <button class="btn btn-s" onclick="showTaxInvoice()" style="padding:8px 10px;background:#f0fdf4;color:#16a34a;border-color:#86efac;" title="세금계산서">🧾</button>
+        </div>
+      </div>
+      <div id="setres"><div class="nodata">조회 버튼을 눌러 확인하세요</div></div>
+      <div style="height:20px;"></div>
+    </div>
+
+    <!-- 메모검색 탭 -->
+    <!-- 검색 탭 (메모 + 할인 내역) -->
+    <div class="pane" id="pane-memo">
+      <div style="display:flex;gap:0;margin:10px 12px 0;border:1px solid var(--bd);border-radius:var(--rx);overflow:hidden;">
+        <button id="search-tab-memo" onclick="switchSearchTab('memo')" style="flex:1;padding:10px;font-size:13px;font-weight:500;border:none;background:var(--acc);color:#fff;cursor:pointer;">📝 메모 검색</button>
+        <button id="search-tab-disc" onclick="switchSearchTab('disc')" style="flex:1;padding:10px;font-size:13px;font-weight:500;border:none;background:var(--bg2);color:var(--t2);cursor:pointer;">💸 할인 내역</button>
+      </div>
+      <!-- 메모 검색 -->
+      <div id="search-pane-memo">
+        <div class="msf" style="margin-top:10px;">
+          <input type="text" id="mkw" placeholder="메모 검색어..." style="font-size:13px;padding:8px 10px;">
+          <div style="display:flex;gap:6px;">
+            <input type="date" id="mf" style="flex:1;font-size:13px;padding:7px 9px;">
+            <input type="date" id="mt" style="flex:1;font-size:13px;padding:7px 9px;">
+          </div>
+          <div style="display:flex;gap:7px;">
+            <button class="btn btn-p" onclick="runMemoSearch()" style="flex:1;justify-content:center;padding:10px;">🔍 검색</button>
+            <button class="btn btn-r" onclick="clearMemoSearch()" style="padding:10px 14px;font-size:12px;">✕ 초기화</button>
+          </div>
+        </div>
+        <div id="memores"><div class="nodata">검색어를 입력하고 검색하세요</div></div>
+      </div>
+      <!-- 할인 내역 검색 -->
+      <div id="search-pane-disc" style="display:none;">
+        <div class="msf" style="margin-top:10px;">
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <label style="font-size:11px;color:var(--t2);">거래처</label>
+            <select id="disc-partner" style="font-size:13px;padding:7px 9px;"><option value="all">전체 거래처</option></select>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <div style="flex:1;display:flex;flex-direction:column;gap:3px;"><label style="font-size:11px;color:var(--t2);">시작일</label><input type="date" id="df" style="font-size:13px;padding:7px 9px;"></div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:3px;"><label style="font-size:11px;color:var(--t2);">종료일</label><input type="date" id="dt" style="font-size:13px;padding:7px 9px;"></div>
+          </div>
+          <div style="display:flex;gap:7px;">
+            <button class="btn btn-p" onclick="runDiscSearch()" style="flex:1;justify-content:center;padding:10px;">💸 할인 내역 조회</button>
+            <button class="btn btn-r" onclick="clearDiscSearch()" style="padding:10px 14px;font-size:12px;">✕ 초기화</button>
+          </div>
+        </div>
+        <div id="disc-result"><div class="nodata">조건을 선택하고 조회하세요</div></div>
+        <div style="height:20px;"></div>
+      </div>
+      <div style="height:20px;"></div>
+    </div>
+
+    <!-- 설정 탭 -->
+    <div class="pane" id="pane-settings">
+      <div class="card" style="margin-top:10px;">
+        <div class="ctitle">보안 설정</div>
+        <div class="seti">
+          <div>
+            <div class="setlb">자동 로그아웃</div>
+            <div class="setsb" id="auto-logout-lbl">자동 로그아웃 꺼짐</div>
+          </div>
+          <select id="auto-logout-sel" onchange="setAutoLogout(this.value)"
+            style="font-size:13px;padding:6px 8px;border:1px solid var(--bd2);border-radius:var(--rx);background:var(--bg2);color:var(--t1);">
+            <option value="0">꺼짐</option>
+            <option value="30">30분</option>
+            <option value="60">1시간</option>
+            <option value="120">2시간</option>
+            <option value="240">4시간</option>
+            <option value="480">8시간</option>
+          </select>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ctitle">클라우드 동기화</div>
+        <div class="seti">
+          <div><div class="setlb">수동 동기화</div><div class="setsb" id="last-sync-txt">마지막 동기화: -</div></div>
+          <button class="btn btn-p btn-s" onclick="manualSync()">지금 동기화</button>
+        </div>
+        <div class="seti">
+          <div><div class="setlb">JSON 백업 저장</div><div class="setsb">기기에 파일로 내보내기</div></div>
+          <button class="btn btn-g btn-s" onclick="exportData()">내보내기</button>
+        </div>
+        <div class="seti">
+          <div><div class="setlb">JSON 가져오기</div><div class="setsb">파일에서 클라우드로 복원</div></div>
+          <button class="btn btn-a btn-s" onclick="importData()">가져오기</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ctitle">주문 테이블 폰트 크기</div>
+        <div class="seti">
+          <div><div class="setlb">폰트 크기</div><div class="setsb" id="font-size-lbl">기본 (100%)</div></div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button onclick="adjustFontSize(-1)" style="width:32px;height:32px;border-radius:50%;border:1px solid var(--bd2);background:var(--bg2);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">−</button>
+            <span id="font-size-val" style="font-size:14px;font-weight:600;min-width:40px;text-align:center;">100%</span>
+            <button onclick="adjustFontSize(1)" style="width:32px;height:32px;border-radius:50%;border:1px solid var(--bd2);background:var(--bg2);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">＋</button>
+            <button onclick="adjustFontSize(0)" style="font-size:11px;padding:5px 8px;border-radius:var(--rx);border:1px solid var(--bd2);background:var(--bg2);cursor:pointer;">초기화</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ctitle">품목 관리</div>
+        <div id="ilist" style="padding:0 13px 8px;"></div>
+        <div style="padding:0 13px 11px;display:flex;gap:7px;">
+          <input type="text" id="new-item" placeholder="새 품목명" style="flex:1;font-size:13px;padding:7px 9px;">
+          <button class="btn btn-p btn-s" onclick="addItem()">추가</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ctitle">거래처 관리</div>
+        <div id="plist" style="padding:0 13px 8px;max-height:180px;overflow-y:auto;"></div>
+        <div style="padding:0 13px 11px;display:flex;gap:7px;">
+          <input type="text" id="new-partner" placeholder="차량 번호" style="flex:1;font-size:13px;padding:7px 9px;">
+          <button class="btn btn-p btn-s" onclick="addPartner()">추가</button>
+        </div>
+      </div>
+      <div style="text-align:center;padding:16px;color:var(--t3);font-size:11px;">양파 판매 관리 v3.0 Firebase</div>
+    </div>
+  </div>
+
+  <!-- FAB -->
+  <button class="fab" id="fab" onclick="saveOrder()">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+  </button>
+
+  <!-- 하단 네비 -->
+  <div class="bnav">
+    <button class="nbtn on" id="nav-order" onclick="switchPane('order',this)">
+      <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>주문
+    </button>
+    <button class="nbtn" id="nav-stat" onclick="switchPane('stat',this)">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>통계
+    </button>
+    <button class="nbtn" id="nav-settle" onclick="switchPane('settle',this)">
+      <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>정산
+    </button>
+    <button class="nbtn" id="nav-memo" onclick="switchPane('memo',this)">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>검색
+    </button>
+    <button class="nbtn" id="nav-settings" onclick="switchPane('settings',this)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>설정
+    </button>
+  </div>
+</div>
+
+<!-- 세금계산서 팝업 -->
+<div id="tax-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;overflow-y:auto;padding:20px 12px;">
+  <div style="background:var(--bg2);border-radius:var(--r);max-width:500px;margin:0 auto;overflow:hidden;">
+    <div style="padding:14px 16px;background:#f0fdf4;border-bottom:1px solid #86efac;display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:15px;font-weight:600;color:#14532d;">🧾 세금계산서 요약</span>
+      <button onclick="closeTaxModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--t2);padding:0 4px;">✕</button>
+    </div>
+    <div style="padding:12px 14px;border-bottom:1px solid var(--bd);display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+        <label style="font-size:11px;color:var(--t2);">년월 선택</label>
+        <input type="month" id="tax-month" style="font-size:14px;padding:8px 10px;border:1px solid var(--bd2);border-radius:var(--rx);background:var(--bg2);color:var(--t1);">
+      </div>
+      <button class="btn btn-p" onclick="runTaxInvoice()" style="padding:8px 16px;align-self:flex-end;">조회</button>
+    </div>
+    <div id="tax-result" style="padding:0;">
+      <div class="nodata" style="padding:24px;">년월을 선택하고 조회하세요</div>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script type="module" src="app.js"></script>
+<script>if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});</script>
+</body>
+</html>
